@@ -51,7 +51,14 @@ class MQTTWatchdog:
         self.alert_active = False
 
         # --- MQTT Client Setup ---
-        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)
+        try:
+            # For paho-mqtt v2.0.0+
+            self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)
+        except AttributeError:
+            # For paho-mqtt v1.x
+            logging.warning("paho-mqtt < 2.0.0 detected, using legacy client initialization.")
+            self.client = mqtt.Client(protocol=mqtt.MQTTv5)
+
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
         self.client.username_pw_set(self.username, self.password)
