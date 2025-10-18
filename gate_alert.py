@@ -32,7 +32,7 @@ class MQTTWatchdog:
         self.port = 8883
         self.topic = "gate/status"
         self.username = "pgate"
-        self.timeout = 120  # seconds
+        self.timeout = 600  # seconds
 
         # --- Secrets & Environment-specific Config ---
         self.password = os.getenv("MQTT_PASS")
@@ -86,7 +86,8 @@ class MQTTWatchdog:
 
     def _send_daily_checkin(self):
         """Sends a daily 'still alive' message and reschedules itself."""
-        msg = "👍 *Daily Check-in*\nThe MQTT Watchdog script is running correctly."
+        timestamp = datetime.now().isoformat(sep=' ', timespec='seconds')
+        msg = f"👍 *Daily Check-in*\nThe MQTT Watchdog script is running correctly.\n_Check-in at `{timestamp}`_"
         logging.info("Sending daily check-in message.")
         self._send_telegram(msg)
         self._schedule_daily_checkin()  # Reschedule for the next day
@@ -118,15 +119,19 @@ class MQTTWatchdog:
         if not self.alert_active:
             self.alert_active = True
             msg = f"🚨 *Gate heartbeat missing*\nNo message on `{self.topic}` for > {self.timeout}s."
+            timestamp = datetime.now().isoformat(sep=' ', timespec='seconds')
+            msg = f"🚨 *Gate heartbeat missing*\nNo message on `{self.topic}` for > {self.timeout}s.\n_Alert triggered at `{timestamp}`_"
             logging.warning(msg)
             self._send_telegram(msg)
 
     def _trigger_recovery(self, ts: Optional[str]):
         """Sends a recovery message if an alert was active."""
         if self.alert_active:
+            timestamp = datetime.now().isoformat(sep=' ', timespec='seconds')
             self.alert_active = False
             ts_str = f"`{ts}`" if ts else "N/A"
             msg = f"✅ *Gate heartbeat restored*\nLast received: {ts_str}."
+            msg = f"✅ *Gate heartbeat restored*\nLast received: {ts_str}.\n_Recovered at `{timestamp}`_"
             logging.info(msg)
             self._send_telegram(msg)
 
@@ -167,7 +172,8 @@ class MQTTWatchdog:
     def run(self):
         """Connects the MQTT client and starts the blocking loop."""
         logging.info("Starting MQTT Watchdog...")
-        self._send_telegram("🚀 *MQTT Watchdog Started*\nMonitoring for gate heartbeats.")
+        timestamp = datetime.now().isoformat(sep=' ', timespec='seconds')
+        self._send_telegram(f"🚀 *MQTT Watchdog Started*\nMonitoring for gate heartbeats.\n_Started at `{timestamp}`_")
         self._schedule_daily_checkin()
         try:
             self.client.connect(self.broker_url, self.port, keepalive=60)
